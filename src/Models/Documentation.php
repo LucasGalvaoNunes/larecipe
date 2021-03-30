@@ -3,6 +3,7 @@
 namespace BinaryTorch\LaRecipe\Models;
 
 use BinaryTorch\LaRecipe\Cache;
+use BinaryTorch\LaRecipe\Facades\AmazonS3;
 use Illuminate\Filesystem\Filesystem;
 use BinaryTorch\LaRecipe\Traits\Indexable;
 use BinaryTorch\LaRecipe\Traits\HasBladeParser;
@@ -71,19 +72,57 @@ class Documentation
     {
         return $this->cache->remember(function() use($version, $page, $data) {
             $path = base_path(config('larecipe.docs.path').'/'.$version.'/'.$page.'.md');
-
-            if ($this->files->exists($path)) {
-                $parsedContent = $this->parse($this->files->get($path));
-
-                $parsedContent = $this->replaceLinks($version, $parsedContent);
-
-                return $this->renderBlade($parsedContent, $data);
+            $useS3 = config('larecipe.docs.driver', 'local') == 's3';
+            if ($useS3) {
+                return $this->getS3MarkDown($path, $version, $data);
+            } else {
+                return $this->getLocalMarkDown($path, $version, $data);
             }
 
-            return null;
         }, 'larecipe.docs.'.$version.'.'.$page);
     }
 
+    /**
+     * @param $path
+     * @param $version
+     * @param array $data
+     * @return false|string|null
+     * @throws \Exception
+     */
+    protected function getLocalMarkDown($path, $version, array $data)
+    {
+        if ($this->files->exists($path)) {
+            $parsedContent = $this->parse($this->files->get($path));
+
+            $parsedContent = $this->replaceLinks($version, $parsedContent);
+
+            return $this->renderBlade($parsedContent, $data);
+        }
+
+        return null;
+    }
+
+    /**
+     * @param $path
+     * @param $version
+     * @param array $data
+     * @return false|string|null
+     * @throws \Exception
+     */
+    protected function getS3MarkDown($path, $version, array $data)
+    {
+        $obj = AmazonS3::storage()->getItem($path);
+
+        if ($this->files->exists($path)) {
+            $parsedContent = $this->parse($this->files->get($path));
+
+            $parsedContent = $this->replaceLinks($version, $parsedContent);
+
+            return $this->renderBlade($parsedContent, $data);
+        }
+
+        return null;
+    }
     /**
      * Replace the version and route placeholders.
      *
