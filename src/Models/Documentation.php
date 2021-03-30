@@ -71,11 +71,13 @@ class Documentation
     public function get($version, $page, $data = [])
     {
         return $this->cache->remember(function() use($version, $page, $data) {
-            $path = base_path(config('larecipe.docs.path').'/'.$version.'/'.$page.'.md');
+            $path = config('larecipe.docs.path') . '/' . $version . '/' . $page . '.md';
             $useS3 = config('larecipe.docs.driver', 'local') == 's3';
+
             if ($useS3) {
                 return $this->getS3MarkDown($path, $version, $data);
             } else {
+                $path = base_path($path);
                 return $this->getLocalMarkDown($path, $version, $data);
             }
 
@@ -111,10 +113,10 @@ class Documentation
      */
     protected function getS3MarkDown($path, $version, array $data)
     {
-        $obj = AmazonS3::storage()->getItem($path);
+        $markdown = AmazonS3::storage()->getItem($path);
 
-        if ($this->files->exists($path)) {
-            $parsedContent = $this->parse($this->files->get($path));
+        if (!is_null($markdown)) {
+            $parsedContent = $this->parse($markdown);
 
             $parsedContent = $this->replaceLinks($version, $parsedContent);
 
