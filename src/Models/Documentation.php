@@ -48,15 +48,14 @@ class Documentation
     public function getIndex($version)
     {
         return $this->cache->remember(function() use($version) {
-            $path = base_path(config('larecipe.docs.path').'/'.$version.'/index.md');
-
-            if ($this->files->exists($path)) {
-                $parsedContent = $this->parse($this->files->get($path));
-
-                return $this->replaceLinks($version, $parsedContent);
+            $path = config('larecipe.docs.path') . '/' . $version . '/index.md';
+            $useS3 = config('larecipe.docs.driver', 'local') == 's3';
+            if ($useS3) {
+                return $this->getS3MarkDown($path, $version);
+            } else {
+                $path = base_path($path);
+                return $this->getLocalMarkDown($path, $version);
             }
-
-            return null;
         }, 'larecipe.docs.'.$version.'.index');
     }
 
@@ -75,10 +74,10 @@ class Documentation
             $useS3 = config('larecipe.docs.driver', 'local') == 's3';
 
             if ($useS3) {
-                return $this->getS3MarkDown($path, $version, $data);
+                return $this->renderBlade($this->getS3MarkDown($path, $version), $data);
             } else {
                 $path = base_path($path);
-                return $this->getLocalMarkDown($path, $version, $data);
+                return $this->renderBlade($this->getLocalMarkDown($path, $version), $data);
             }
 
         }, 'larecipe.docs.'.$version.'.'.$page);
@@ -87,18 +86,15 @@ class Documentation
     /**
      * @param $path
      * @param $version
-     * @param array $data
      * @return false|string|null
      * @throws \Exception
      */
-    protected function getLocalMarkDown($path, $version, array $data)
+    protected function getLocalMarkDown($path, $version)
     {
         if ($this->files->exists($path)) {
             $parsedContent = $this->parse($this->files->get($path));
 
-            $parsedContent = $this->replaceLinks($version, $parsedContent);
-
-            return $this->renderBlade($parsedContent, $data);
+            return $this->replaceLinks($version, $parsedContent);
         }
 
         return null;
@@ -107,20 +103,17 @@ class Documentation
     /**
      * @param $path
      * @param $version
-     * @param array $data
      * @return false|string|null
      * @throws \Exception
      */
-    protected function getS3MarkDown($path, $version, array $data)
+    protected function getS3MarkDown($path, $version)
     {
         $markdown = AmazonS3::storage()->getItem($path);
 
         if (!is_null($markdown)) {
             $parsedContent = $this->parse($markdown);
 
-            $parsedContent = $this->replaceLinks($version, $parsedContent);
-
-            return $this->renderBlade($parsedContent, $data);
+            return $this->replaceLinks($version, $parsedContent);
         }
 
         return null;
