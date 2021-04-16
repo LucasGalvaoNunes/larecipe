@@ -253,6 +253,18 @@ table {
             @apply list-reset pl-4;
         }
     }
+    & > ul:first-of-type::-webkit-scrollbar-track {
+        padding: 2px 0;
+    }
+    & > ul:first-of-type::-webkit-scrollbar {
+        width: 8px;
+    }
+    & > ul:first-of-type::-webkit-scrollbar-thumb {
+        border-radius: 15px;
+        box-shadow: inset 0 0 6px rgba(0,0,0,.3);
+        background-color: var(--primary);
+        border: 1px solid #000;
+    }
 
     :not(pre) > code {
         @apply bg-grey-lighter px-2 rounded text-primary leading-normal;
