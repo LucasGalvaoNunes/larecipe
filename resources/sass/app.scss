@@ -238,6 +238,8 @@ table {
         @apply fixed p-4 list-reset w-1/5;
         top: 100px;
         right: 30px;
+        overflow-y: auto;
+        max-height: 100%;
 
         li {
             @apply border-b border-dashed border-grey-light leading-normal p-3;
